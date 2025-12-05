@@ -1,48 +1,61 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<title>Simple M3U8 Player</title>
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Simple M3U8 Player</title>
 
 <style>
   body {
     margin: 0;
     background: #000;
   }
-  video {
+
+  /* Khung giữ tỷ lệ 16:9 */
+  .player-wrapper {
+    position: relative;
     width: 100%;
-    height: auto;
+    padding-top: 56.25%; /* 16:9 */
+    background: #000;
+    overflow: hidden;
+  }
+
+  video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: #000;
   }
 </style>
 </head>
 <body>
 
-<video id="video" controls playsinline></video>
+<div class="player-wrapper">
+  <video id="video" controls playsinline></video>
+</div>
 
-<!-- HLS.js -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <script>
-// Lấy link m3u8 từ ?url=
+// URL lấy từ ?url=
 const params = new URLSearchParams(location.search);
 const url = params.get("url");
 
-// Nếu không có ?url= trong iframe thì đặt link mặc định tại đây:
+// URL mặc định
 const defaultURL = "https://cdn.jsdelivr.net/gh/minf5678/testcdn@main/ClaireBell5mux.m3u8";
-
 const finalURL = url ? url : defaultURL;
 
 const video = document.getElementById("video");
 
 if (Hls.isSupported()) {
-    const hls = new Hls();
-    hls.loadSource(finalURL);
-    hls.attachMedia(video);
-} else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    // fallback cho iPhone / iPad
-    video.src = finalURL;
+  const hls = new Hls();
+  hls.loadSource(finalURL);
+  hls.attachMedia(video);
+} else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+  video.src = finalURL;
 }
 </script>
 
