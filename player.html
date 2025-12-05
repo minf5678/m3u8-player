@@ -3,36 +3,120 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Video Player</title>
+  <title>M3U8 Player Pro</title>
   <style>
-    body, html { margin:0; padding:0; height:100%; background:#000; }
-    video { width:100%; height:100%; }
+    body, html { margin:0; padding:0; height:100%; background:#000; font-family:Arial; }
+    #player-container { position:relative; width:100%; height:100%; }
+    video { width:100%; height:100%; background:#000; }
+    #controls {
+      position:absolute; bottom:20px; left:20px;
+      display:flex; gap:10px; z-index:20;
+    }
+    button {
+      padding:8px 12px;
+      background:#ffffff40; border:1px solid #fff5; color:white;
+      border-radius:6px; cursor:pointer;
+      backdrop-filter:blur(4px);
+    }
+    button:hover { background:#ffffff70; }
+
+    #server-menu {
+      position:absolute; top:20px; right:20px;
+      background:#0008; color:white; padding:10px;
+      border-radius:8px; display:none; flex-direction:column;
+      gap:6px; z-index:30;
+    }
+    #server-menu button { width:150px; text-align:left; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
+
 <body>
-  <video id="video" controls autoplay></video>
 
-  <script>
-    // Lấy link M3U8 từ URL ?url=
-    const urlParams = new URLSearchParams(window.location.search);
-    const videoSrc = urlParams.get('url');
+<div id="player-container">
+  <video id="video" controls crossorigin="anonymous"></video>
 
-    const video = document.getElementById('video');
+  <!-- Nút điều khiển -->
+  <div id="controls">
+    <button id="back10">⏮ -10s</button>
+    <button id="forward10">⏭ +10s</button>
+    <button id="serverBtn">🌐 Server</button>
+    <button id="subBtn">📝 Sub (.vtt)</button>
+  </div>
 
-    if (!videoSrc) {
-      document.body.innerHTML = "<h2 style='color:white'>Thiếu link video (cần ?url=...)</h2>";
+  <!-- Menu chọn server -->
+  <div id="server-menu"></div>
+</div>
+
+<script>
+  const video = document.getElementById("video");
+  let hls;
+
+  // ========= LẤY URL HIỆN TẠI =========
+  const urlParams = new URLSearchParams(window.location.search);
+  const defaultSrc = urlParams.get("url");
+
+  // ========= DANH SÁCH SERVER =========
+  // 👉 Bạn chỉnh sửa danh sách ở đây
+  const servers = [
+    { name: "Server 1", url: defaultSrc },
+    { name: "Server 2", url: "https://example.com/ALT1.m3u8" },
+    { name: "Server 3", url: "https://example.com/ALT2.m3u8" }
+  ];
+
+  // ========= NẠP VIDEO =========
+  function loadVideo(src) {
+    if (hls) hls.destroy();
+    if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(src);
+      hls.attachMedia(video);
     } else {
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(videoSrc);
-        hls.attachMedia(video);
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = videoSrc;
-      } else {
-        document.body.innerHTML = "Trình duyệt không hỗ trợ phát M3U8.";
-      }
+      video.src = src;
     }
-  </script>
+  }
+
+  loadVideo(defaultSrc);
+
+  // ========= NÚT TUA 10 GIÂY =========
+  document.getElementById("back10").onclick = () => video.currentTime -= 10;
+  document.getElementById("forward10").onclick = () => video.currentTime += 10;
+
+  // ========= MENU SERVER =========
+  const serverBtn = document.getElementById("serverBtn");
+  const menu = document.getElementById("server-menu");
+
+  serverBtn.onclick = () => {
+    menu.style.display = menu.style.display === "flex" ? "none" : "flex";
+  };
+
+  servers.forEach(s => {
+    let btn = document.createElement("button");
+    btn.textContent = s.name;
+    btn.onclick = () => {
+      loadVideo(s.url);
+      menu.style.display = "none";
+    };
+    menu.appendChild(btn);
+  });
+
+  // ========= TẢI SUB RỜI =========
+  document.getElementById("subBtn").onclick = async () => {
+    let subUrl = prompt("Nhập link file .vtt:");
+    if (!subUrl) return;
+
+    let track = document.createElement("track");
+    track.kind = "subtitles";
+    track.label = "Vietnamese";
+    track.srclang = "vi";
+    track.src = subUrl;
+    track.default = true;
+
+    video.appendChild(track);
+
+    alert("Đã thêm sub!");
+  };
+</script>
+
 </body>
 </html>
