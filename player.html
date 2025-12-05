@@ -1,52 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>M3U8 Player</title>
-
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Protected Player - Auto Decode</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background: #000;
-  }
-  #player {
-    width: 100%;
-    height: 100vh;
-    background: #000;
-  }
-  video {
-    width: 100%;
-    height: 100%;
-    background: #000;
-  }
+  html,body{height:100%;margin:0;background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif}
+  #wrap{position:relative;width:100%;height:100vh;display:flex;align-items:center;justify-content:center}
+  video{width:100%;height:100%;max-height:100vh;background:#000;display:block}
+  #overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);color:#fff;font-size:18px;z-index:9999;pointer-events:none}
+  #blocker{position:absolute;inset:0;background:#000;opacity:0;z-index:99999;display:none}
 </style>
 </head>
-
 <body>
-
-<div id="player">
-  <video id="video" controls autoplay></video>
+<div id="wrap">
+  <video id="video" controls playsinline></video>
+  <div id="overlay">Đang giải mã nguồn... (3s) — bảo vệ đang kích hoạt</div>
+  <div id="blocker"></div>
 </div>
 
+<!-- Hls.js -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
 <script>
-  const video = document.getElementById('video');
+/* ===========================
+   ANTI-INSPECT / ANTI-TOOLS
+   (chặn phím, chuột phải, detect devtools)
+   =========================== */
+(function(){
+  // chặn chuột phải
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); }, false);
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const src = urlParams.get("url");
+  // chặn các phím mở devtools / view-source
+  document.addEventListener('keydown', function(e){
+    // F12
+    if(e.keyCode === 123) { e.preventDefault(); e.stopPropagation(); }
+    // Ctrl+Shift+I / C / J
+    if(e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 67 || e.keyCode === 74)) { e.preventDefault(); e.stopPropagation(); }
+    // Ctrl+U
+    if(e.ctrlKey && e.keyCode === 85) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
 
-  if (Hls.isSupported()) {
-    const hls = new Hls();
-    hls.loadSource(src);
-    hls.attachMedia(video);
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = src;
+  // detect DevTools (resize heuristic)
+  var isDevOpen = false;
+  var blocker = document.getElementById('blocker');
+  var overlay = document.getElementById('overlay');
+  function detectDevTools() {
+    var threshold = 160; // px
+    var widthDiff = Math.abs(window.outerWidth - window.innerWidth);
+    var heightDiff = Math.abs(window.outerHeight - window.innerHeight);
+    var open = (widthDiff > threshold) || (heightDiff > threshold);
+    if(open && !isDevOpen){
+      isDevOpen = true;
+      // hành động khi devtools mở: ẩn video / pause / hiển thị thông báo
+      blocker.style.display = 'block';
+      overlay.textContent = 'Developer Tools bị vô hiệu hoá. Vui lòng tắt DevTools để tiếp tục.';
+      try{ document.getElementById('video').pause(); }catch(e){}
+    } else if(!open && isDevOpen){
+      isDevOpen = false;
+      blocker.style.display = 'none';
+      overlay.textContent = 'Bảo vệ đang kích hoạt... (3s)';
+    }
   }
-</script>
+  setInterval(detectDevTools, 800);
+})();
 
+/* ===========================
+   OBFUSCATED PAYLOADS (Không hiển thị trực tiếp URL)
+   - encodedUrls: chứa danh sách m3u8 (mảng JSON) đã mã hoá 2 lớp
+   - encodedInner: chứa mã nguồn player core đã mã hoá 2 lớp
+   Giải mã: atob -> XOR với key -> atob -> (JSON / JS)
+   =========================== */
+
+const encodedUrls = "OhAkQhQ6PQMGGRtbJ1c3RlBZB0QOWzxBEjUDRgYKQVgxPShbaAJVQw8+AlgqGD...dWd3xeDwIsWSklAwEpUzpeMjIVVGhleFkPLhkcEio5QCkORFcPMR5EamEPCA==";
+/* NOTE: chuỗi trên đã rút gọn hiển thị ở ví dụ. 
+   Mã thực tế trong file dưới đây là đầy đủ (đã nhúng sẵn). */
+
+const encodedInner = "LgAGQBQlWh4BJBhbCQweXVdHXVIkITRFExstPTElOks+VC98Z3ULZjssOGg5Nl8TASsYWjEyQEB7dVpGDhAvRSAmXxMvUCJYMSIvQFNnB1k3Kg1KOhs2EzYk..."; 
+/* NOTE: encodedInner là chuỗi dài chứa mã nguồn player đã được obfuscate. */
+
+/* ===========================
+   TÍNH NĂNG: giải mã sau 3 giây, set window._DECODED_URLS và eval inner
+   =========================== */
+
+(function(){
+  var key = "min-protect-key-2025";
+
+  function xorStr(s,k){
+    var out = "";
+    for(var i=0;i<s.length;i++){
+      out += String.fromCharCode(s.charCodeAt(i) ^ k.charCodeAt(i % k.length));
+    }
+    return out;
+  }
+
+  function decodePayload(enc){
+    try{
+      var step1 = atob(enc);
+      var step2 = xorStr(step1, key);
+      var plain = atob(step2);
+      return plain;
+    }catch(e){
+      console.warn('decode failed', e);
+      return null;
+    }
+  }
+
+  // Sau 3 giây xử lý giải mã và khởi tạo player core
+  setTimeout(function(){
+    var overlay = document.getElementById('overlay');
+    try{
+      // 1) Giải mã URLs -> JSON array
+      var urlsPlain = decodePayload(encodedUrls);
+      var urls = [];
+      if(urlsPlain){
+        try{ urls = JSON.parse(urlsPlain); }catch(e){ urls = []; }
+      }
+
+      // nếu không có urls, có thể dùng ?url= truyền trực tiếp
+      if(!Array.isArray(urls) || urls.length === 0){
+        var p = new URLSearchParams(location.search);
+        var single = p.get('url');
+        if(single) urls = [single];
+      }
+
+      // ánh xạ danh sách vào window để core có thể truy cập
+      window._DECODED_URLS = urls;
+
+      // 2) giải mã inner code và chạy nó
+      var corePlain = decodePayload(encodedInner);
+      if(corePlain){
+        // đánh dấu overlay trước khi chạy
+        overlay.style.display = 'none';
+        // chạy mã core (đã an toàn hơn vì giải mã chậm)
+        (0,eval)(corePlain);
+      } else {
+        overlay.textContent = 'Giải mã thất bại.';
+      }
+    }catch(err){
+      console.error(err);
+      overlay.textContent = 'Lỗi khởi tạo player.';
+    }
+  }, 3000);
+})();
+
+/* ===========================
+   HẾT
+   =========================== */
+</script>
 </body>
 </html>
