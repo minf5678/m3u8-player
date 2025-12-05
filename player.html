@@ -12,17 +12,26 @@
 </head>
 <body>
   <video id="video" controls autoplay></video>
+
   <script>
+    // Lấy link M3U8 từ URL ?url=
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoSrc = urlParams.get('url');
+
     const video = document.getElementById('video');
-    const videoSrc = "https://cdn.jsdelivr.net/gh/minf5678/testcdn@main/ClaireBell5mux.m3u8";
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(videoSrc);
-      hls.attachMedia(video);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = videoSrc;
+
+    if (!videoSrc) {
+      document.body.innerHTML = "<h2 style='color:white'>Thiếu link video (cần ?url=...)</h2>";
     } else {
-      document.body.innerHTML = "M3U8 playback not supported in this browser.";
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(videoSrc);
+        hls.attachMedia(video);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = videoSrc;
+      } else {
+        document.body.innerHTML = "Trình duyệt không hỗ trợ phát M3U8.";
+      }
     }
   </script>
 </body>
