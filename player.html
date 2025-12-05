@@ -2,8 +2,10 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>M3U8 Player Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M3U8 Player</title>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
   html, body {
@@ -12,155 +14,38 @@
     height: 100%;
     background: #000;
   }
-
-  #player-container {
-    position: relative;
+  #player {
     width: 100%;
     height: 100vh;
     background: #000;
   }
-
   video {
     width: 100%;
     height: 100%;
     background: #000;
-    display: block;
   }
-
-  /* --- Nút nổi trên video --- */
-  #control-bar {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    display: flex;
-    gap: 10px;
-    z-index: 9999;      /* QUAN TRỌNG: Đẩy lên trên cùng */
-  }
-
-  .ctrl-btn {
-    background: rgba(0,0,0,0.45);
-    border: 1px solid rgba(255,255,255,0.4);
-    color: white;
-    padding: 7px 11px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 15px;
-    backdrop-filter: blur(6px);
-    transition: 0.2s;
-  }
-
-  .ctrl-btn:hover {
-    background: rgba(255,255,255,0.25);
-  }
-
-  /* Menu server */
-  #server-menu {
-    position: absolute;
-    top: 65px;
-    right: 20px;
-    background: rgba(0,0,0,0.7);
-    padding: 10px;
-    display: none;
-    flex-direction: column;
-    border-radius: 10px;
-    gap: 8px;
-    z-index: 9999;
-    backdrop-filter: blur(6px);
-  }
-
-  #server-menu button {
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.3);
-    padding: 6px 10px;
-    color: #fff;
-    border-radius: 8px;
-    text-align: left;
-    width: 150px;
-  }
-
-  #server-menu button:hover {
-    background: rgba(255,255,255,0.3);
-  }
-
 </style>
-
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
+
 <body>
 
-<div id="player-container">
-
-  <video id="video" controls crossorigin="anonymous"></video>
-
-  <!-- Nút nổi -->
-  <div id="control-bar">
-    <button class="ctrl-btn" id="back10">⏮</button>
-    <button class="ctrl-btn" id="forward10">⏭</button>
-    <button class="ctrl-btn" id="serverBtn">🌐</button>
-    <button class="ctrl-btn" id="subBtn">📝</button>
-  </div>
-
-  <!-- Menu server -->
-  <div id="server-menu"></div>
-
+<div id="player">
+  <video id="video" controls autoplay></video>
 </div>
 
 <script>
-  const video = document.getElementById("video");
-  let hls;
+  const video = document.getElementById('video');
 
   const urlParams = new URLSearchParams(window.location.search);
-  const defaultSrc = urlParams.get("url");
+  const src = urlParams.get("url");
 
-  const servers = [
-    { name: "Server 1", url: defaultSrc },
-    { name: "Server 2", url: "https://example.com/backup1.m3u8" },
-    { name: "Server 3", url: "https://example.com/backup2.m3u8" }
-  ];
-
-  function loadVideo(src) {
-    if (hls) hls.destroy();
-    if (Hls.isSupported()) {
-      hls = new Hls();
-      hls.loadSource(src);
-      hls.attachMedia(video);
-    } else {
-      video.src = src;
-    }
+  if (Hls.isSupported()) {
+    const hls = new Hls();
+    hls.loadSource(src);
+    hls.attachMedia(video);
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = src;
   }
-
-  loadVideo(defaultSrc);
-
-  document.getElementById("back10").onclick = () => video.currentTime -= 10;
-  document.getElementById("forward10").onclick = () => video.currentTime += 10;
-
-  const menu = document.getElementById("server-menu");
-  document.getElementById("serverBtn").onclick = () => {
-    menu.style.display = menu.style.display === "flex" ? "none" : "flex";
-  };
-
-  servers.forEach(s => {
-    const btn = document.createElement("button");
-    btn.textContent = s.name;
-    btn.onclick = () => {
-      loadVideo(s.url);
-      menu.style.display = "none";
-    };
-    menu.appendChild(btn);
-  });
-
-  document.getElementById("subBtn").onclick = () => {
-    const link = prompt("Nhập link file .vtt:");
-    if (!link) return;
-    const track = document.createElement("track");
-    track.kind = "subtitles";
-    track.label = "Vietnamese";
-    track.srclang = "vi";
-    track.src = link;
-    track.default = true;
-    video.appendChild(track);
-    alert("Đã tải sub thành công!");
-  };
 </script>
 
 </body>
